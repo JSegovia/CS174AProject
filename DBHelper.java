@@ -8,15 +8,67 @@ public class DBHelper {
 
     private Connection conn = null;
     private Statement stmt = null;
-    private ResultSet rs;
+    private ResultSet rs = null;
     private Customers customer;
 
-    public void logIn(){
-        //if user doesn't exist create one in the db
-        //else get user and initialize User
-            //query DB for taxId, name, address and pinNumber
+    public boolean logIn(String name, int pin){
 
+        boolean success = false;
+
+        try{
+            System.out.println("Start of Try");
+            String customerQuery = "SELECT * from Accounts WHERE name = /'" + name + "'/";
+            //if customer doesn't exist create one in db
+            boolean queryIsSuccess = !stmt.execute(customerQuery);
+            System.out.println(queryIsSuccess);
+            if(queryIsSuccess){
+                int taxId = (int) Math.random();
+                String address = "123 blah blah wy";
+                //initialize customer
+                customer = new Customers(taxId, name, address, pin);
+
+                //Insert into db
+                String insertCustomer = "INSERT INTO Customers (taxId, name, address, pinNumber) " +
+                                        "VALUES (" + taxId + ", /'" + name + "/', /'" + address +"/'," + pin + ")";
+                System.out.println(stmt.executeUpdate(insertCustomer));
+            }
+            //if the customer does exist, just initialize customer
+            else{
+                rs = stmt.executeQuery(customerQuery);
+                //get taxid and address
+                int taxId = rs.getInt("taxId");
+                String address = rs.getString("address");
+                customer = new Customers(taxId, name, address, pin);
+                System.out.println(customer.pinNumber);
+            }
+
+            success = true;
+        }
+        catch(SQLException e){
+            System.out.println(e.getMessage());
+        }
+        catch(Exception e){
+            //Handle errors for Class.forName
+            System.out.println(e.getMessage());
+        }
+        finally {
+            //finally block used to close resources
+            try {
+                if (stmt != null)
+                    conn.close();
+            } catch (SQLException se) {
+            }// do nothing
+            try {
+                if (conn != null)
+                    conn.close();
+            } catch (SQLException se) {
+                se.printStackTrace();
+            }
+        }
+
+        return success;
     }
+
     public void createNewAccount(String accountType){}
     public void withdraw(int amount){
         if(customer.isEmpty){
@@ -29,35 +81,16 @@ public class DBHelper {
 
     public void connect(String jdbcDriver, String DbUrl, String username, String password){
         try{
-            //STEP 2: Register JDBC driver
+            //Register JDBC driver
             Class.forName(jdbcDriver);
 
-            //STEP 3: Open a connection
+            //Open a connection
             System.out.println("Connecting to a selected database...");
             conn = DriverManager.getConnection(DbUrl, username, password);
             System.out.println("Connected database successfully...");
 
-            //STEP 4: Execute a query
-            System.out.println("Creating statement...");
+            //initialize stmt
             stmt = conn.createStatement();
-
-            String sql = "SELECT cid, cname, city, discount FROM cs174.Customers";
-            rs = stmt.executeQuery(sql);
-            //STEP 5: Extract data from result set
-            while(rs.next()){
-                //Retrieve by column name
-                String cid  = rs.getString("cid");
-                String cname = rs.getString("cname");
-                String city = rs.getString("city");
-                double discount = rs.getDouble("discount");
-
-                //Display values
-                System.out.print("cid: " + cid);
-                System.out.print(", cname: " + cname);
-                System.out.print(", city: " + city);
-                System.out.println(", discount: " + discount);
-            }
-            rs.close();
         }catch(SQLException se){
             //Handle errors for JDBC
             se.printStackTrace();

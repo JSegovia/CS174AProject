@@ -13,9 +13,17 @@ public class Main {
 
     public static void main(String[] args) {
         DBHelper dbHelper = new DBHelper();
-        dbHelper.connect("oracle.jdbc.driver.OracleDriver",
-                        "jdbc:oracle:thin:@cloud-34-133.eci.ucsb.edu:1521:XE",
-                        "jsegovia",
-                        "7654999");
+        dbHelper.connect(JDBC_DRIVER,
+                        DB_URL,
+                        USERNAME,
+                        PASSWORD);
+
+        if(dbHelper.logIn("jonathan", 6969)){
+            System.out.println("Login Successful");
+        }
+        else{
+            System.out.println("Login Failed");
+        }
+
     }//end main
 }//end JDBCExample
