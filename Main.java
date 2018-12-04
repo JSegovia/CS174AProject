@@ -8,8 +8,8 @@ public class Main {
     static final String DB_URL = "jdbc:oracle:thin:@cloud-34-133.eci.ucsb.edu:1521:XE";
 
     //  Database credentials
-    static final String USERNAME = "jsegovia";
-    static final String PASSWORD = "7654999";
+    static final String USERNAME = "arturo";
+    static final String PASSWORD = "8016297";
 
     public static void main(String[] args) {
         DBHelper dbHelper = new DBHelper();

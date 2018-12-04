@@ -2,16 +2,29 @@ package edu.ucsb.cs.JonathanSegoviaArturoMilanes;
 
 import java.sql.*;
 
+
+
 public class DBHelper {
 
-    public Connection conn = null;
-    public Statement stmt = null;
-    public ResultSet rs;
+    private Connection conn = null;
+    private Statement stmt = null;
+    private ResultSet rs;
+    private Customers customer;
 
-    public void logIn(){}
-    public void createNewCheckingsAccount(){}
-    public void createNewSavingsAccount(){}
-    public void withdraw(){}
+    public void logIn(){
+        //if user doesn't exist create one in the db
+        //else get user and initialize User
+            //query DB for taxId, name, address and pinNumber
+
+    }
+    public void createNewAccount(String accountType){}
+    public void withdraw(int amount){
+        if(customer.isEmpty){
+            //do something
+        }
+
+
+    }
     public void deposit(){}
 
     public void connect(String jdbcDriver, String DbUrl, String username, String password){
