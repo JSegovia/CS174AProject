@@ -14,6 +14,8 @@ public class DBHelper {
     private ResultSet rs = null;
     private Customers customer;
 
+    private boolean isClosed=false;
+    
     public boolean createNewCustomer(String name, String address, int pin){
         //TODO: check to see if pin is 4 digits, check if the user already exists, and check to see if taxId already exists
         boolean success = false;
@@ -129,9 +131,78 @@ public class DBHelper {
 
         return success;
     }
-    public void withdraw(int amount){
+    public void withdraw(float amount, String accountType)  {
+        if (isClosed== true) {
+            //if account closed then no transactions allowed
+        System.out.println("account is closed");
+        return;
+        }
+
+        float oldBalance = customer.accounts.get(accountType).balance;
+        float newBalance = oldBalance-amount;
+                //if transaction makes balance below 0, then fail.
+                //if transaction makes balance .01 or less automatically closes the account
+                if (newBalance <0){
+                //fail
+                    System.out.println("fail");
+                return;
+                }
+
+                else if (newBalance <=.01) {
+                    //close account
+                    isClosed = true; //if closed then no transactions allowed;
+                    System.out.println("close account");
+                }
+                else {
+
+
+                    //update balance!!
+                    String updatedBalance=
+                            "update accounts " +
+                            "set balance = " + newBalance +
+                            " where accountid= " +  customer.accounts.get(accountType).accountId;
+                   try {
+                       stmt.executeQuery(updatedBalance);
+                   }catch (SQLException E) {
+                   E.printStackTrace();
+                   }
+                }
+
+                //update balance in class
+        customer.accounts.get(accountType).balance=newBalance;
+           
+
     }
-    public void deposit(){}
+    public void deposit(float amount, String accountType){
+
+        if (isClosed== true) {
+            //if account closed then no transactions allowed
+            System.out.println("account is closed");
+            return;
+        }
+
+         float oldBalance = customer.accounts.get(accountType).balance;
+                float newBalance = oldBalance + amount;
+
+
+
+                //update balance!!
+                String updatedBalance =
+                        "update accounts " +
+                                "set balance = " + newBalance +
+                                " where accountid = " + customer.accounts.get(accountType).accountId;
+                try{
+                stmt.executeQuery(updatedBalance);
+
+
+               // rs.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+//update balance in class
+        customer.accounts.get(accountType).balance= newBalance;
+    }
 
     public void connect(String jdbcDriver, String DbUrl, String username, String password){
         try{
