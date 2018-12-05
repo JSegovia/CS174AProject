@@ -1,7 +1,10 @@
 package edu.ucsb.cs.JonathanSegoviaArturoMilanes;
 
-import java.sql.*;
+import com.google.gson.Gson;
 
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class DBHelper {
@@ -11,35 +14,68 @@ public class DBHelper {
     private ResultSet rs = null;
     private Customers customer;
 
-    public boolean logIn(String name, int pin){
+    public boolean createNewCustomer(String name, String address, int pin){
+        //TODO: check to see if pin is 4 digits, check if the user already exists, and check to see if taxId already exists
+        boolean success = false;
+        try{
+            //initialize customer
+            int taxId = (int)(Math.random() * ((Integer.MAX_VALUE) + 1))*(-1);
+            customer = new Customers(taxId, name, address, pin);
 
+            //Insert into db
+            String insertCustomer = "INSERT INTO Customers (taxId, name, address, pin) " +
+                    "VALUES (" + taxId + ", '" + name + "', '" + address +"'," + pin + ")";
+            stmt.executeUpdate(insertCustomer);
+
+            success = true;
+        }catch(SQLException e){
+            System.out.println(e.getMessage());
+        }
+        catch(Exception e){
+            //Handle errors for Class.forName
+            System.out.println(e.getMessage());
+        }
+        return success;
+    }
+
+    public boolean logIn(String name, int pin){
+        //TODO: check to see if user doesn't exit
         boolean success = false;
 
-        try{
-            System.out.println("Start of Try");
-            String customerQuery = "SELECT * from Accounts WHERE name = /'" + name + "'/";
-            //if customer doesn't exist create one in db
-            boolean queryIsSuccess = !stmt.execute(customerQuery);
-            System.out.println(queryIsSuccess);
-            if(queryIsSuccess){
-                int taxId = (int) Math.random();
-                String address = "123 blah blah wy";
-                //initialize customer
-                customer = new Customers(taxId, name, address, pin);
+        int taxId = Integer.MIN_VALUE;
+        String address = "";
 
-                //Insert into db
-                String insertCustomer = "INSERT INTO Customers (taxId, name, address, pinNumber) " +
-                                        "VALUES (" + taxId + ", /'" + name + "/', /'" + address +"/'," + pin + ")";
-                System.out.println(stmt.executeUpdate(insertCustomer));
+        try{
+
+            //get customer information
+            String customerQuery = "SELECT * from Customers WHERE name = '" + name + "'";
+            rs = stmt.executeQuery(customerQuery);
+            while(rs.next()) {
+                taxId = rs.getInt("taxId");
+                address = rs.getString("address");
+                System.out.println(address);
             }
-            //if the customer does exist, just initialize customer
-            else{
-                rs = stmt.executeQuery(customerQuery);
-                //get taxid and address
-                int taxId = rs.getInt("taxId");
-                String address = rs.getString("address");
-                customer = new Customers(taxId, name, address, pin);
-                System.out.println(customer.pinNumber);
+            customer = new Customers(taxId, name, address, pin);
+
+            //get customer accounts
+            String accountIdQuery = "SELECT accountId FROM Owns WHERE taxId = " + customer.taxId;
+            rs = stmt.executeQuery(accountIdQuery);
+            while(rs.next()){
+                int accountId = rs.getInt("accountId");
+                String accountQuery = "SELECT * FROM Accounts WHERE accountId = " + accountId;
+                ResultSet acctRS = stmt.executeQuery(accountQuery);
+
+                while(acctRS.next()){
+                    int acctId = acctRS.getInt("accountId");
+                    float balance = acctRS.getFloat("balance");
+                    String branch = acctRS.getString("branch");
+                    float interestRate = acctRS.getFloat("interestRate");
+                    String accountType = acctRS.getString("accountType");
+                    String transactionHistory = acctRS.getString("transactionHistory");
+
+                    customer.addAccount(acctId, balance, branch, interestRate, accountType);
+                    customer.accounts.get(accountType).populateTransactionHistory(transactionHistory);
+                }
             }
 
             success = true;
@@ -51,31 +87,49 @@ public class DBHelper {
             //Handle errors for Class.forName
             System.out.println(e.getMessage());
         }
-        finally {
-            //finally block used to close resources
-            try {
-                if (stmt != null)
-                    conn.close();
-            } catch (SQLException se) {
-            }// do nothing
-            try {
-                if (conn != null)
-                    conn.close();
-            } catch (SQLException se) {
-                se.printStackTrace();
-            }
-        }
 
         return success;
     }
 
-    public void createNewAccount(String accountType){}
-    public void withdraw(int amount){
-        if(customer.isEmpty){
-            //do something
+    public boolean createNewAccount(String accountType, String branch){
+        //TODO: handle interest rates
+
+        if(customer.accounts.containsKey(accountType)){
+            System.out.println("This account already exists");
         }
 
+        boolean success = false;
+        try{
+            int accountId = (int)(Math.random() * ((Integer.MAX_VALUE) + 1))*(-1);
+            float balance = 0.0f;
+            float interestRate = 5.5f;
+            String transactionHistory = new Gson().toJson(new ArrayList<String>());
 
+            //insert into Accounts
+            String insertAccount = "INSERT INTO Accounts (accountId, balance, branch, interestRate, transactionHistory, accountType) " +
+                    "VALUES (" + accountId + "," + balance + ", '" + branch + "', " + interestRate + ", '" + transactionHistory + "', '" + accountType + "')";
+            stmt.executeUpdate(insertAccount);
+
+            //insert into Owns
+            String insertOwns = "INSERT INTO Owns (accountId, taxId) " +
+                                "VALUES(" + accountId + ", " + customer.taxId + ")";
+            stmt.executeUpdate(insertOwns);
+
+            //initialize new Account
+            customer.addAccount(accountId, balance, branch, interestRate, accountType);
+
+            success = true;
+        }catch(SQLException e){
+            System.out.println(e.getMessage());
+        }
+        catch(Exception e){
+            //Handle errors for Class.forName
+            System.out.println(e.getMessage());
+        }
+
+        return success;
+    }
+    public void withdraw(int amount){
     }
     public void deposit(){}
 
@@ -97,19 +151,6 @@ public class DBHelper {
         }catch(Exception e){
             //Handle errors for Class.forName
             e.printStackTrace();
-        }finally{
-            //finally block used to close resources
-            try{
-                if(stmt!=null)
-                    conn.close();
-            }catch(SQLException se){
-            }// do nothing
-            try{
-                if(conn!=null)
-                    conn.close();
-            }catch(SQLException se){
-                se.printStackTrace();
-            }//end finally try
         }//end try
     }
 }
