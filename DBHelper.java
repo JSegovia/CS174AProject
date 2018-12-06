@@ -167,6 +167,9 @@ public class DBHelper {
                 }
                 insertAccount = "INSERT INTO Accounts (accountId, balance, branch, interestRate, transactionHistory, accountType, accountLinkedId, isClosed) " +
                         "VALUES (" + accountId + "," + balance + ", '" + branch + "', " + interestRate + ", '" + transactionHistory + "', '" + accountType + "', '" + accountLinkedId + "', " + 1 +")";
+
+                String updateAccount = "UPDATE Accounts SET accountLinkedId = " + accountId + " WHERE accountID = " + accountLinkedId;
+                stmt.executeUpdate(updateAccount);
             }
             else {
                 insertAccount = "INSERT INTO Accounts (accountId, balance, branch, interestRate, transactionHistory, accountType, isClosed) " +
