@@ -54,10 +54,59 @@ public class BankTeller {
         }
     }
 
-    private void checkTransaction(DBHelper dbHelper, Scanner input){}
-    private void generateMonthlyStatement(DBHelper dbHelper, Scanner input){}
-    private void listClosedAccounts(DBHelper dbHelper, Scanner input){}
-    private void generateDrugAndTaxReport(DBHelper dbHelper, Scanner input){}
+    private void checkTransaction(DBHelper dbHelper, Scanner input){
+        int accountId;
+        float amount;
+
+        System.out.println("Please Enter the Account ID of the Checking Account you'd like to write a check from");
+        accountId = input.nextInt();
+
+        System.out.println("Please Enter the amount you'd like to write a check for");
+        amount = input.nextFloat();
+
+
+        if(dbHelper.writeCheck(accountId,amount)){
+            System.out.println("Check Transactions Successful");
+        }
+        else{
+            System.out.println("There was an error with the Check Transaction");
+        }
+    }
+
+
+    private void generateMonthlyStatement(DBHelper dbHelper, Scanner input){
+        int accountId;
+
+
+        System.out.println("Please Enter the Account ID of  Account you'd like to gms from");
+        accountId = input.nextInt();
+
+        if(dbHelper.gms(accountId)){
+            System.out.println("Generated Monthly Statement Successful");
+        }
+        else{
+            System.out.println("There was an error with the Generated Monthly Statement");
+        }
+    }
+    private void listClosedAccounts(DBHelper dbHelper, Scanner input){
+        if(dbHelper.closedAccList()){
+            System.out.println("List of Closed Accounts has been printed Successfully");
+        }
+        else{
+            System.out.println("There was an error generating the list of Closed Accounts");
+        }
+
+    }
+    private void generateDrugAndTaxReport(DBHelper dbHelper, Scanner input){
+
+        if(dbHelper.dter()){
+            System.out.println("List of GDTR has been printed Successfully");
+        }
+        else{
+            System.out.println("There was an error generating the list of GDTR");
+        }
+
+    }
     private void customerReport(DBHelper dbHelper, Scanner input){
         int taxId;
 
@@ -75,7 +124,14 @@ public class BankTeller {
             System.out.println(r);
         }
     }
-    private void addInterest(DBHelper dbHelper, Scanner input){}
+    private void addInterest(DBHelper dbHelper, Scanner input){
+        if(dbHelper.dter()){
+            System.out.println("Added interest was Successful");
+        }
+        else{
+            System.out.println("There was an error adding interest");
+        }
+    }
     private void createAccount(DBHelper dbHelper, Scanner input){
         int accountId;
         int taxId;
