@@ -111,7 +111,16 @@ public class ATM {
         float result = dbHelper.deposit(accountId, amount, true, -1, "Deposit");
         System.out.println("The New Balance in Account " + accountId + " is: " + result);
     }
-    private void topUp(DBHelper dbHelper, Scanner input){}
+    private void topUp(DBHelper dbHelper, Scanner input){
+        int accountId;
+        float amount;
+        System.out.println("Please Enter the Account ID that you would like to top-up from");
+        accountId = input.nextInt();
+        System.out.println("Please Enter the amount you would like to top-up");
+        amount = input.nextFloat();
+
+         dbHelper.topUp(accountId, amount);
+         }
     private void withdraw(DBHelper dbHelper, Scanner input){
         int accountId;
         float amount;
@@ -124,7 +133,16 @@ public class ATM {
         float result = dbHelper.withdraw(accountId, amount, true, -1, "Withdraw");
         System.out.println("The New Balance in Account " + accountId + " is: " + result);
     }
-    private void purchase(DBHelper dbHelper, Scanner input){}
+    private void purchase(DBHelper dbHelper, Scanner input){
+        int accountId;
+        float amount;
+        System.out.println("Please Enter the Account ID that you would like to purchase from");
+        accountId = input.nextInt();
+        System.out.println("Please Enter the amount you would like to purchase");
+        amount = input.nextFloat();
+
+        dbHelper.purchase(accountId, amount);
+    }
     private void transfer(DBHelper dbHelper, Scanner input){
         int senderAcctId;
         int receiverAcctId;
