@@ -15,7 +15,7 @@ public class DBHelper {
     private ResultSet rs = null;
     private Customers customer;
 
-    public boolean createNewCustomer(String name, String address, int pin){
+    public boolean createNewCustomer(String name, String address, int pin, int taxId){
         if(String.valueOf(pin).length() != 4){
             System.out.println("PIN is not the right length");
             return false;
@@ -29,18 +29,11 @@ public class DBHelper {
                 return false;
             }
 
-            //initialize customer
-            int taxId = (int)(Math.random() * ((Integer.MAX_VALUE) + 1))*(-1);
-            boolean isUnique = false;
-            while(!isUnique){
-                String doesTaxIdExist = "SELECT taxId FROM Customers WHERE taxId = " + taxId;
-                rs = stmt.executeQuery(doesTaxIdExist);
-                if(rs.next()){
-                    taxId = (int)(Math.random() * ((Integer.MAX_VALUE) + 1))*(-1);
-                }
-                else{
-                    isUnique = true;
-                }
+            String doesTaxIdExist = "SELECT taxId FROM Customers WHERE taxId = " + taxId;
+            rs = stmt.executeQuery(doesTaxIdExist);
+            if(rs.next()){
+                System.out.println("This Tax ID Already Exists");
+                return false;
             }
             customer = new Customers(taxId, name, address, pin);
 
@@ -105,9 +98,9 @@ public class DBHelper {
                     String accountType = acctRS.getString("accountType");
                     String transactionHistory = acctRS.getString("transactionHistory");
                     int linkedAcctId = acctRS.getInt("accountLinkedId");
+                    int isClosed = acctRS.getInt("isClosed");
 
-
-                    customer.addAccount(acctId, balance, branch, interestRate, accountType);
+                    customer.addAccount(acctId, balance, branch, interestRate, accountType, isClosed);
                     customer.accounts.get(accountId).populateTransactionHistory(transactionHistory);
                     customer.accounts.get(accountId).setLinkedAcctId(linkedAcctId);
                 }
@@ -128,8 +121,9 @@ public class DBHelper {
                     float interestRate = acctRS.getFloat("interestRate");
                     String accountType = acctRS.getString("accountType");
                     String transactionHistory = acctRS.getString("transactionHistory");
+                    int isClosed = acctRS.getInt("isClosed");
 
-                    customer.addAccount(acctId, balance, branch, interestRate, accountType);
+                    customer.addAccount(acctId, balance, branch, interestRate, accountType, isClosed);
                     customer.accounts.get(accountId).populateTransactionHistory(transactionHistory);
                 }
             }
@@ -147,40 +141,46 @@ public class DBHelper {
         return success;
     }
 
-    public boolean createNewAccount(String accountType, String branch, int accountLinkedId){
+    public boolean createNewAccount(int accountId, int taxId, String accountType, String branch, int accountLinkedId){
         //TODO: handle interest rates
-
-        if(customer.accounts.containsKey(accountType)){
-            System.out.println("This account already exists");
-            return false;
-        }
 
         boolean success = false;
         try{
-            int accountId = (int)(Math.random() * ((Integer.MAX_VALUE) + 1))*(-1);
+            //int accountId = (int)(Math.random() * ((Integer.MAX_VALUE) + 1))*(-1);
             float balance = 0.0f;
             float interestRate = 5.5f;
             String transactionHistory = new Gson().toJson(new ArrayList<String>());
             String insertAccount;
 
             //insert into Accounts
-            if (accountType=="Pocket"){
+            if (accountType=="pocket"){
+                String getAccount = "SELECT * FROM Accounts WHERE accountId = " + accountLinkedId;
+                rs = stmt.executeQuery(getAccount);
+                if(!rs.next()){
+                    System.out.println("The account you are trying to link to does not exist");
+                    return false;
+                }
+
+                if(getAcctType(accountLinkedId).equals("pocket")){
+                    System.out.println("The account you are trying to link to is a Pocket Account");
+                    return false;
+                }
                 insertAccount = "INSERT INTO Accounts (accountId, balance, branch, interestRate, transactionHistory, accountType, accountLinkedId, isClosed) " +
                         "VALUES (" + accountId + "," + balance + ", '" + branch + "', " + interestRate + ", '" + transactionHistory + "', '" + accountType + "', '" + accountLinkedId + "', " + 1 +")";
             }
             else {
-                insertAccount = "INSERT INTO Accounts (accountId, balance, branch, interestRate, transactionHistory, accountType) " +
+                insertAccount = "INSERT INTO Accounts (accountId, balance, branch, interestRate, transactionHistory, accountType, isClosed) " +
                         "VALUES (" + accountId + "," + balance + ", '" + branch + "', " + interestRate + ", '" + transactionHistory + "', '" + accountType + "', " + 1 +")";
             }
             stmt.executeUpdate(insertAccount);
 
             //insert into Owns
             String insertOwns = "INSERT INTO PrimarilyOwns (accountId, taxId) " +
-                    "VALUES(" + accountId + ", " + customer.taxId + ")";
+                    "VALUES(" + accountId + ", " + taxId + ")";
             stmt.executeUpdate(insertOwns);
 
             //initialize new Account
-            customer.addAccount(accountId, balance, branch, interestRate, accountType);
+            //customer.addAccount(accountId, balance, branch, interestRate, accountType, 1);
 
             success = true;
         }catch(SQLException e){
@@ -216,11 +216,13 @@ public class DBHelper {
 
 
     public float withdraw(int accountId, float amount, boolean createTransaction, int recieverAcctId, String transactionType)  {
-//        if (isClosed== true) {
-//            //if account closed then no transactions allowed
-//            System.out.println("account is closed");
-//            return;
-//        }
+        if (isAcctClosed(accountId)) {
+            //if account closed then no transactions allowed
+            System.out.println("You cannot make this transaction because Account " + accountId + " is Closed");
+            return -1.0f;
+        }
+
+
 
         //TODO: Add timestamp
         //check is account belongs to current customer
@@ -252,17 +254,12 @@ public class DBHelper {
         float newBalance = oldBalance-amount;
         //if transaction makes balance below 0, then fail.
         //if transaction makes balance .01 or less automatically closes the account
-        if (newBalance <0){
-            //fail
-            System.out.println("fail");
-            return -2.0f;
+        if (newBalance <= 0){
+            closeAcct(accountId);
+            System.out.println("Balance of Account " + accountId + " fell below 0 and is now closed");
+            return newBalance;
         }
 
-        else if (newBalance <=.01) {
-            //close account
-            //isClosed = true; //if closed then no transactions allowed;
-            System.out.println("close account");
-        }
         else {
 
 
@@ -294,11 +291,11 @@ public class DBHelper {
     }
     public float deposit(int accountId, float amount, boolean createTransaction, int senderAcctId, String transactionType){
 
-//        if (isClosed== true) {
-//            //if account closed then no transactions allowed
-//            System.out.println("account is closed");
-//            return;
-//        }
+        if (isAcctClosed(accountId)) {
+            //if account closed then no transactions allowed
+            System.out.println("You cannot make this transaction because Account " + accountId + " is Closed");
+            return -1.0f;
+        }
 
         String accountType = getAcctType(accountId);
         if(accountType.equals("")) return -1.0f;
@@ -330,7 +327,7 @@ public class DBHelper {
         String updatedBalance =
                 "update accounts " +
                         "set balance = " + newBalance +
-                        "where accountid = " + accountId;
+                        " where accountid = " + accountId;
         try{
             stmt.executeQuery(updatedBalance);
 
@@ -355,6 +352,18 @@ public class DBHelper {
     }
 
     public boolean transfer(int senderAcctId, int recieverAcctId, float amount){
+        if (isAcctClosed(senderAcctId)) {
+            //if account closed then no transactions allowed
+            System.out.println("You cannot make this transaction because Account " + senderAcctId + " is Closed");
+            return false;
+        }
+
+        if (isAcctClosed(recieverAcctId)) {
+            //if account closed then no transactions allowed
+            System.out.println("You cannot make this transaction because Account " + recieverAcctId + " is Closed");
+            return false;
+        }
+
         if(senderAcctId == recieverAcctId){
             System.out.println("Same account ids used");
             return false;
@@ -382,6 +391,12 @@ public class DBHelper {
         return success;
     }
     public boolean collect(int acctId, float amount){
+        if (isAcctClosed(acctId)) {
+            //if account closed then no transactions allowed
+            System.out.println("You cannot make this transaction because Account " + acctId + " is Closed");
+            return false;
+        }
+
         if(!isPocket(acctId)){
             System.out.println("This account Id is not for a pocket account");
             return false;
@@ -414,6 +429,16 @@ public class DBHelper {
         return true;
     }
     public boolean wire(int senderAcctId, int recieverAcctId, float amount){
+        if (isAcctClosed(senderAcctId)) {
+            //if account closed then no transactions allowed
+            System.out.println("You cannot make this transaction because Account " + senderAcctId + " is Closed");
+            return false;
+        }
+        if (isAcctClosed(recieverAcctId)) {
+            //if account closed then no transactions allowed
+            System.out.println("You cannot make this transaction because Account " + recieverAcctId+ " is Closed");
+            return false;
+        }
         boolean success = false;
 
         if(isCustomerAcct(senderAcctId)) {
@@ -427,6 +452,18 @@ public class DBHelper {
         return success;
     }
     public boolean payFriend(int senderAcctId, int recieverAcctId, float amount){
+        if (isAcctClosed(senderAcctId)) {
+            //if account closed then no transactions allowed
+            System.out.println("You cannot make this transaction because Account " + senderAcctId + " is Closed");
+            return false;
+        }
+
+        if (isAcctClosed(recieverAcctId)) {
+            //if account closed then no transactions allowed
+            System.out.println("You cannot make this transaction because Account " + recieverAcctId + " is Closed");
+            return false;
+        }
+
         if(!isCustomerAcct(senderAcctId)){
             System.out.println("This account does not belong to current customer");
             return false;
@@ -440,6 +477,126 @@ public class DBHelper {
         deposit(senderAcctId, amount, false, -1, "");
 
         return true;
+    }
+
+    public List<String> customerReport(int taxId){
+        List<String> report = new ArrayList<String>();
+        try{
+            //get co owned customer accounts
+            String accountIdQuery = "SELECT accountId FROM Owns WHERE taxId = " + customer.taxId;
+            rs = stmt.executeQuery(accountIdQuery);
+            while(rs.next()){
+                int accountId = rs.getInt("accountId");
+                String accountQuery = "SELECT * FROM Accounts WHERE accountId = " + accountId;
+                ResultSet acctRS = stmt.executeQuery(accountQuery);
+
+                while(acctRS.next()){
+                    int acctId = acctRS.getInt("accountId");
+                    int isClosed = acctRS.getInt("isClosed");
+
+                    String closed = isClosed == 1 ? "Not Closed" : "Closed";
+                    String r = "Account " + accountId + "is " + closed;
+                    report.add(r);
+                }
+            }
+
+            //get primary customer accounts
+            String primaryAcctQuery = "SELECT accountId FROM PrimarilyOwns WHERE taxId = " + customer.taxId;
+            rs = stmt.executeQuery(primaryAcctQuery);
+            while(rs.next()){
+                int accountId = rs.getInt("accountId");
+                String accountQuery = "SELECT * FROM Accounts WHERE accountId = " + accountId;
+                ResultSet acctRS = stmt.executeQuery(accountQuery);
+
+                while(acctRS.next()){
+                    int acctId = acctRS.getInt("accountId");
+                    int isClosed = acctRS.getInt("isClosed");
+
+                    String closed = isClosed == 1 ? "Not Closed" : "Closed";
+                    String r = "Account " + accountId + "is " + closed;
+                    report.add(r);
+                }
+            }
+        }catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return report;
+    }
+
+    public boolean removeClosedAccts(){
+        boolean success = false;
+
+        try {
+            //String deleteClosed = "DELETE FROM Accounts WHERE isClosed = 0";
+            //stmt.executeUpdate(deleteClosed);
+            String getAccountIds = "SELECT accountId FROM Accounts WHERE isClosed = 0";
+            rs = stmt.executeQuery(getAccountIds);
+            while(rs.next()){
+                int acctId = rs.getInt("accountId");
+
+                String deleteFromOwns = "DELETE FROM Owns WHERE accountId = " + acctId;
+                stmt.executeUpdate(deleteFromOwns);
+
+                String deleteFromPrimarilyOwns = "DELETE FROM PrimarilyOwns WHERE accountId = " + acctId;
+                stmt.executeUpdate(deleteFromPrimarilyOwns);
+            }
+
+            String deleteClosed = "DELETE FROM Accounts WHERE isClosed = 0";
+            stmt.executeUpdate(deleteClosed);
+
+            success = true;
+        }catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return success;
+    }
+    public boolean removeCustomersWithNoAccounts(){
+        boolean success = false;
+
+        try{
+            String getTaxIds = "SELECT taxId FROM Customers";
+            rs = stmt.executeQuery(getTaxIds);
+            while(rs.next()){
+                int taxId = rs.getInt("taxId");
+
+                String checkOwns = "SELECT * FROM Owns WHERE taxId = " + taxId;
+                ResultSet ownsRS = stmt.executeQuery(checkOwns);
+
+                String checkPOwns = "SELECT * FROM PrimarilyOwns WHERE taxId = " + taxId;
+                ResultSet pOwnsRS = stmt.executeQuery(checkPOwns);
+
+                if(!ownsRS.next() && !pOwnsRS.next()){
+                    String deleteCustomer = "DELETE FROM Customers WHERE taxId = " + taxId;
+                    stmt.executeUpdate(deleteCustomer);
+                }
+            }
+            success = true;
+        }catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return success;
+    }
+    public boolean removeTransactions(){
+        boolean success = false;
+
+        try{
+            String transactionHistory = new Gson().toJson(new ArrayList<String>());
+            String getAcctIds = "SELECT accountId FROM Accounts";
+            rs = stmt.executeQuery(getAcctIds);
+            while(rs.next()){
+                int accountId = rs.getInt("accountId");
+                String deleteTrans = "UPDATE Accounts SET transactionHistory = '" + transactionHistory + "' WHERE accountId = " + accountId;
+                stmt.executeUpdate(deleteTrans);
+            }
+            success = true;
+
+        }catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return success;
     }
 
     public void closeAcct(int acctId){

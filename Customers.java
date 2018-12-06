@@ -22,8 +22,8 @@ public class Customers {
         accounts = new HashMap<>();
     }
 
-    public void addAccount(int accountId, float balance, String branch, float interestRate, String accountType){
-        Account acct = new Account(accountId, balance, branch, interestRate, accountType);
+    public void addAccount(int accountId, float balance, String branch, float interestRate, String accountType, int isClosed){
+        Account acct = new Account(accountId, balance, branch, interestRate, accountType, isClosed);
         accounts.put(accountId, acct);
     }
 
@@ -38,19 +38,16 @@ public class Customers {
         List<String> transactionHistory;
         int isClosed;
 
-        Account(int accountId, float balance, String branch, float interestRate, String accountType){
+        Account(int accountId, float balance, String branch, float interestRate, String accountType, int isClosed){
             this.accountId = accountId;
             this.balance = balance;
             this.branch = branch;
             this.interestRate = interestRate;
             this.accountType = accountType;
-            this.isClosed = 1;
+            this.isClosed = isClosed;
             //transactionHistory = new ArrayList<>();
         }
 
-        public void closeAcct(){
-
-        }
 
         public void setLinkedAcctId(int linkedAcctId){
             this.linkedAcctId = linkedAcctId;

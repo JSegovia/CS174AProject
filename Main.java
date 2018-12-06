@@ -2,6 +2,8 @@ package edu.ucsb.cs.JonathanSegoviaArturoMilanes;
 //STEP 1. Import required packages
 //import java.sql.*;
 
+import java.util.Scanner;
+
 public class Main {
     // JDBC driver name and database URL
     static final String JDBC_DRIVER = "oracle.jdbc.driver.OracleDriver";
@@ -18,26 +20,19 @@ public class Main {
                         USERNAME,
                         PASSWORD);
 
-//        if(dbHelper.createNewCustomer("Jonathan", "6621 Del Playa Dr", 6969)){
-//            System.out.println("Customer Creation Successful");
-//        }
-//        else{
-//            System.out.println("Customer Creation Failed");
-//        }
-//
-        if(dbHelper.logIn("Jonathan", 6969)){
-            System.out.println("Login Successful");
-        }
-        else{
-            System.out.println("Login Failed");
-        }
-        if(dbHelper.createNewAccount("Student", "BofA")){
-            System.out.println("Account Creation Successful");
-        }
-        else{
-            System.out.println("Account Creation Failed");
+        Scanner input = new Scanner(System.in);
+
+        while(true) {
+            System.out.println("Press 1 for Bank Teller and Press 2 for ATM");
+            int option = input.nextInt();
+            if (option == 1) {
+                new BankTeller().bankTeller(dbHelper, input);
+            }
+            else{
+                new ATM().atm(dbHelper, input);
+            }
         }
 
+    }
 
-    }//end main
-}//end JDBCExample
+}
