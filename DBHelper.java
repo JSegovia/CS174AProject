@@ -3,7 +3,9 @@ package edu.ucsb.cs.JonathanSegoviaArturoMilanes;
 import com.google.gson.Gson;
 
 import java.sql.*;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -148,7 +150,17 @@ public class DBHelper {
         try{
             //int accountId = (int)(Math.random() * ((Integer.MAX_VALUE) + 1))*(-1);
             float balance = 0.0f;
-            float interestRate = 5.5f;
+            float interestRate = 0.0f;
+            if(accountType.equals("checking")){
+                interestRate = 5.5f/12.0f;
+            }
+            else if(accountType.equals("savings")){
+                interestRate = 7.5f/12.0f;
+            }
+            else{
+                interestRate = 0.0f;
+            }
+
             String transactionHistory = new Gson().toJson(new ArrayList<String>());
             String insertAccount;
 
@@ -284,9 +296,29 @@ public class DBHelper {
         }
 
 
+
         //add transaction
         if(createTransaction && isCustomer){
             customer.accounts.get(accountId).addTransaction(customer.name, transactionType, "", amount, accountId, recieverAcctId);
+        }
+        else if(createTransaction){
+            String getTransactionHistory = "SELECT transactionHistory FROM Accounts WHERE accountId = " + accountId;
+            try {
+                List<String> th = new ArrayList<>();
+                rs = stmt.executeQuery(getTransactionHistory);
+                while(rs.next()){
+                    String thAsString = rs.getString("transactionHistory");
+                    th = new Gson().fromJson(thAsString, new ArrayList<String>().getClass());
+                }
+
+                th.add("" + " " + transactionType + " " + new SimpleDateFormat("dd-MM-yyyy").format(new Date().getTime()) + " " + amount + " " + accountId + " " + recieverAcctId);
+
+                String json = new Gson().toJson(th);
+                String deleteTrans = "UPDATE Accounts SET transactionHistory = '" + json + "' WHERE accountId = " + accountId;
+                stmt.executeUpdate(deleteTrans);
+            }catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
 
         return newBalance;
@@ -342,8 +374,26 @@ public class DBHelper {
 
         //add transaction
         if(createTransaction && isCustomer){
+            customer.accounts.get(accountId).addTransaction(customer.name, transactionType, new SimpleDateFormat("dd-MM-yyyy").format(new Date().getTime()), amount, senderAcctId, accountId);
+        }
+        else if(createTransaction){
+            String getTransactionHistory = "SELECT transactionHistory FROM Accounts WHERE accountId = " + accountId;
+            try {
+                List<String> th = new ArrayList<>();
+                rs = stmt.executeQuery(getTransactionHistory);
+                while(rs.next()){
+                    String thAsString = rs.getString("transactionHistory");
+                    th = new Gson().fromJson(thAsString, new ArrayList<String>().getClass());
+                }
 
-            customer.accounts.get(accountId).addTransaction(customer.name, transactionType, "", amount, senderAcctId, accountId);
+                th.add("" + " " + transactionType + " " + new SimpleDateFormat("dd-MM-yyyy").format(new Date().getTime()) + " " + amount + " " + senderAcctId + " " + accountId);
+
+                String json = new Gson().toJson(th);
+                String deleteTrans = "UPDATE Accounts SET transactionHistory = '" + json + "' WHERE accountId = " + accountId;
+                stmt.executeUpdate(deleteTrans);
+            }catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
 
         //update balance in class
@@ -390,7 +440,7 @@ public class DBHelper {
         }
 
         withdraw(senderAcctId, amount, true, recieverAcctId, "Transfer");
-        deposit(recieverAcctId, amount, false, -1, "");
+        deposit(recieverAcctId, amount, true, senderAcctId, "Transfer");
         return success;
     }
     public boolean collect(int acctId, float amount){
@@ -427,7 +477,7 @@ public class DBHelper {
         }
 
         withdraw(acctId, amount + (amount * 0.03f), true, recieverId, "Collect");
-        deposit(recieverId, amount, false, -1, "");
+        deposit(recieverId, amount, true, acctId, "Collect");
 
         return true;
     }
@@ -450,7 +500,7 @@ public class DBHelper {
         }
 
         withdraw(senderAcctId, amount + (amount * 0.02f), true, recieverAcctId, "Wire");
-        deposit(recieverAcctId, amount, false, -1, "");
+        deposit(recieverAcctId, amount, true, senderAcctId, "Wire");
 
         return success;
     }
@@ -477,7 +527,7 @@ public class DBHelper {
         }
 
         withdraw(senderAcctId, amount, true, recieverAcctId, "Pay-Friend");
-        deposit(senderAcctId, amount, false, -1, "");
+        deposit(recieverAcctId, amount, true, senderAcctId, "Pay-Friend");
 
         return true;
     }
