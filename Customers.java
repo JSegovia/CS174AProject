@@ -34,6 +34,7 @@ public class Customers {
         String branch;
         float interestRate;
         String accountType;
+        int linkedAcctId;
         List<String> transactionHistory;
 
         Account(int accountId, float balance, String branch, float interestRate, String accountType){
@@ -45,7 +46,12 @@ public class Customers {
             //transactionHistory = new ArrayList<>();
         }
 
-        public void addTransaction(String transaction){
+
+        public void setLinkedAcctId(int linkedAcctId){
+            this.linkedAcctId = linkedAcctId;
+        }
+        public void addTransaction(String name, String transactionType, String timeStamp, float amount, int senderAcctId, int receiverAcctId){
+            String transaction = name + " " + transactionType + " " + timeStamp + " " + amount + " " + senderAcctId + " " + receiverAcctId;
             transactionHistory.add(transaction);
         }
         public String transactionHistoryToJson(){
