@@ -44,14 +44,19 @@ public class Customers {
             this.branch = branch;
             this.interestRate = interestRate;
             this.accountType = accountType;
-            this.isClosed = isClosed;
+            this.isClosed=isClosed;
             //transactionHistory = new ArrayList<>();
         }
 
+        public  void closeAcct(){
+
+
+        }
 
         public void setLinkedAcctId(int linkedAcctId){
             this.linkedAcctId = linkedAcctId;
         }
+
         public void addTransaction(String name, String transactionType, String timeStamp, float amount, int senderAcctId, int receiverAcctId){
             String transaction = name + " " + transactionType + " " + timeStamp + " " + amount + " " + senderAcctId + " " + receiverAcctId;
             transactionHistory.add(transaction);
