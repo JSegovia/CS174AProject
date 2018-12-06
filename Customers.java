@@ -43,6 +43,7 @@ public class Customers {
             this.branch = branch;
             this.interestRate = interestRate;
             this.accountType = accountType;
+
             //transactionHistory = new ArrayList<>();
         }
 
