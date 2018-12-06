@@ -93,11 +93,12 @@ public class DBHelper {
         return success;
     }
 
-    public boolean createNewAccount(String accountType, String branch){
+  public boolean createNewAccount(String accountType, String branch, String accountLinked){
         //TODO: handle interest rates
 
         if(customer.accounts.containsKey(accountType)){
             System.out.println("This account already exists");
+            return false;
         }
 
         boolean success = false;
@@ -106,15 +107,23 @@ public class DBHelper {
             float balance = 0.0f;
             float interestRate = 5.5f;
             String transactionHistory = new Gson().toJson(new ArrayList<String>());
+String insertAccount;
 
             //insert into Accounts
-            String insertAccount = "INSERT INTO Accounts (accountId, balance, branch, interestRate, transactionHistory, accountType) " +
-                    "VALUES (" + accountId + "," + balance + ", '" + branch + "', " + interestRate + ", '" + transactionHistory + "', '" + accountType + "')";
+            if (accountType=="Pocket"){
+               int accountLinkedId = customer.accounts.get(accountLinked).accountId;
+                insertAccount = "INSERT INTO Accounts (accountId, balance, branch, interestRate, transactionHistory, accountType, accountLinkedId) " +
+                        "VALUES (" + accountId + "," + balance + ", '" + branch + "', " + interestRate + ", '" + transactionHistory + "', '" + accountType + "', '" + accountLinkedId + "')";
+            }
+            else {
+                 insertAccount = "INSERT INTO Accounts (accountId, balance, branch, interestRate, transactionHistory, accountType) " +
+                        "VALUES (" + accountId + "," + balance + ", '" + branch + "', " + interestRate + ", '" + transactionHistory + "', '" + accountType + "')";
+            }
             stmt.executeUpdate(insertAccount);
 
             //insert into Owns
             String insertOwns = "INSERT INTO Owns (accountId, taxId) " +
-                                "VALUES(" + accountId + ", " + customer.taxId + ")";
+                    "VALUES(" + accountId + ", " + customer.taxId + ")";
             stmt.executeUpdate(insertOwns);
 
             //initialize new Account
