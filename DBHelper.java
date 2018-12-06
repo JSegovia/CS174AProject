@@ -165,8 +165,12 @@ public class DBHelper {
 
             //insert into Accounts
             if (accountType=="Pocket"){
-                insertAccount = "INSERT INTO Accounts (accountId, balance, branch, interestRate, transactionHistory, accountType, accountLinkedId, isClosed) " +
-                        "VALUES (" + accountId + "," + balance + ", '" + branch + "', " + interestRate + ", '" + transactionHistory + "', '" + accountType + "', '" + accountLinkedId + "', " + 1 +")";
+                insertAccount = "INSERT INTO Accounts (accountId, balance, branch, interestRate, transactionHistory, accountType, accountLinkedId) " +
+                        "VALUES (" + accountId + "," + balance + ", '" + branch + "', " + interestRate + ", '" + transactionHistory + "', '" + accountType + "', '" + accountLinkedId + "')";
+
+                //update checking or savings account with linked pocket account
+                String updateAccount = "UPDATE Accounts SET accountLinkedId = " + accountId + " WHERE accountID = " + accountLinkedId;
+                stmt.executeUpdate(updateAccount);
             }
             else {
                 insertAccount = "INSERT INTO Accounts (accountId, balance, branch, interestRate, transactionHistory, accountType) " +
