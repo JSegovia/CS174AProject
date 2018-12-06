@@ -155,22 +155,29 @@ public class DBHelper {
 
             //insert into Accounts
             if (accountType=="pocket"){
-                String getAccount = "SELECT * FROM Accounts WHERE accountId = " + accountLinkedId;
-                rs = stmt.executeQuery(getAccount);
-                if(!rs.next()){
-                    System.out.println("The account you are trying to link to does not exist");
-                    return false;
-                }
-
                 if(getAcctType(accountLinkedId).equals("pocket")){
                     System.out.println("The account you are trying to link to is a Pocket Account");
                     return false;
                 }
-                insertAccount = "INSERT INTO Accounts (accountId, balance, branch, interestRate, transactionHistory, accountType, accountLinkedId, isClosed) " +
-                        "VALUES (" + accountId + "," + balance + ", '" + branch + "', " + interestRate + ", '" + transactionHistory + "', '" + accountType + "', '" + accountLinkedId + "', " + 1 +")";
 
-                String updateAccount = "UPDATE Accounts SET accountLinkedId = " + accountId + " WHERE accountID = " + accountLinkedId;
-                stmt.executeUpdate(updateAccount);
+                String getAccount = "SELECT * FROM Accounts WHERE accountId = " + accountLinkedId;
+                rs = stmt.executeQuery(getAccount);
+                boolean doesExist = false;
+                while(rs.next()){
+                    doesExist = true;
+                }
+
+                if(doesExist) {
+                    insertAccount = "INSERT INTO Accounts (accountId, balance, branch, interestRate, transactionHistory, accountType, accountLinkedId, isClosed) " +
+                            "VALUES (" + accountId + "," + balance + ", '" + branch + "', " + interestRate + ", '" + transactionHistory + "', '" + accountType + "', '" + accountLinkedId + "', " + 1 + ")";
+
+                    String updateAccount = "UPDATE Accounts SET accountLinkedId = " + accountId + " WHERE accountID = " + accountLinkedId;
+                    stmt.executeUpdate(updateAccount);
+                }
+                else{
+                    System.out.println("The Account you are trying to link to does not exist");
+                    return false;
+                }
             }
             else {
                 insertAccount = "INSERT INTO Accounts (accountId, balance, branch, interestRate, transactionHistory, accountType, isClosed) " +
