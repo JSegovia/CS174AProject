@@ -441,6 +441,63 @@ public class DBHelper {
         return true;
     }
 
+     public boolean topUp(int accountId, float amount){
+        //
+        ////        if (isClosed()) {
+        ////            //if account closed then no transactions allowed
+        ////            System.out.println("account is closed");
+        ////            return false;
+        ////        }
+
+        if(!isCustomerAcct(accountId)){
+            System.out.println("This account does not belong to current customer");
+            return false;
+        }
+
+        int recieverId = -1;
+        try{
+            //pocketID
+            String getLinkedAcctId = "SELECT accountLinkedId FROM Accounts WHERE accountId = " + accountId;
+            rs = stmt.executeQuery(getLinkedAcctId);
+            while(rs.next()){
+                recieverId = rs.getInt("accountLinkedId");
+            }
+        }catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        if(recieverId == -1){
+            System.out.println("This account does is not linked to another");
+            return false;
+        }
+
+        //withdraw from checkings or savings
+        withdraw(accountId, amount, true, recieverId, "TopUp");
+        //deposit to pocket
+        deposit(recieverId, amount, false, -1, "");
+        return true;
+    }
+    public boolean purchase(int accountId, float amount){
+
+//        if (isClosed()) {
+//            //if account closed then no transactions allowed
+//            System.out.println("account is closed");
+//            return false;
+//        }
+
+        if(!isPocket(accountId)){
+            System.out.println("This account Id is not for a pocket account");
+            return false;
+        }
+        if(!isCustomerAcct(accountId)){
+            System.out.println("This account does not belong to current customer");
+            return false;
+        }
+
+        withdraw(accountId, amount, true, -1, "Purchase");
+        return true;
+    }
+    
     private boolean isPocket(int accountID){
         try {
             String accountType = "";
