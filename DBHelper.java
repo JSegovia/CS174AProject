@@ -106,9 +106,10 @@ public class DBHelper {
                     String transactionHistory = acctRS.getString("transactionHistory");
                     int linkedAcctId = acctRS.getInt("accountLinkedId");
 
+
                     customer.addAccount(acctId, balance, branch, interestRate, accountType);
-                    customer.accounts.get(accountType).populateTransactionHistory(transactionHistory);
-                    customer.accounts.get(accountType).setLinkedAcctId(linkedAcctId);
+                    customer.accounts.get(accountId).populateTransactionHistory(transactionHistory);
+                    customer.accounts.get(accountId).setLinkedAcctId(linkedAcctId);
                 }
             }
 
@@ -129,7 +130,7 @@ public class DBHelper {
                     String transactionHistory = acctRS.getString("transactionHistory");
 
                     customer.addAccount(acctId, balance, branch, interestRate, accountType);
-                    customer.accounts.get(accountType).populateTransactionHistory(transactionHistory);
+                    customer.accounts.get(accountId).populateTransactionHistory(transactionHistory);
                 }
             }
 
@@ -146,7 +147,7 @@ public class DBHelper {
         return success;
     }
 
-    public boolean createNewAccount(String accountType, String branch, String accountLinked){
+    public boolean createNewAccount(String accountType, String branch, int accountLinkedId){
         //TODO: handle interest rates
 
         if(customer.accounts.containsKey(accountType)){
@@ -164,13 +165,12 @@ public class DBHelper {
 
             //insert into Accounts
             if (accountType=="Pocket"){
-                int accountLinkedId = customer.accounts.get(accountLinked).accountId;
-                insertAccount = "INSERT INTO Accounts (accountId, balance, branch, interestRate, transactionHistory, accountType, accountLinkedId) " +
-                        "VALUES (" + accountId + "," + balance + ", '" + branch + "', " + interestRate + ", '" + transactionHistory + "', '" + accountType + "', '" + accountLinkedId + "')";
+                insertAccount = "INSERT INTO Accounts (accountId, balance, branch, interestRate, transactionHistory, accountType, accountLinkedId, isClosed) " +
+                        "VALUES (" + accountId + "," + balance + ", '" + branch + "', " + interestRate + ", '" + transactionHistory + "', '" + accountType + "', '" + accountLinkedId + "', " + 1 +")";
             }
             else {
                 insertAccount = "INSERT INTO Accounts (accountId, balance, branch, interestRate, transactionHistory, accountType) " +
-                        "VALUES (" + accountId + "," + balance + ", '" + branch + "', " + interestRate + ", '" + transactionHistory + "', '" + accountType + "')";
+                        "VALUES (" + accountId + "," + balance + ", '" + branch + "', " + interestRate + ", '" + transactionHistory + "', '" + accountType + "', " + 1 +")";
             }
             stmt.executeUpdate(insertAccount);
 
@@ -194,10 +194,9 @@ public class DBHelper {
         return success;
     }
 
-    public boolean addCoOwner(int taxId, String accountType){
+    public boolean addCoOwner(int taxId, int accountId){
         boolean success = false;
         try{
-            int accountId = customer.accounts.get(accountType).accountId;
             String addCoOwnerQuery = "INSERT INTO Owns(taxId, accountId) " +
                                      "VALUES (" + taxId + ", " + accountId + ")";
             stmt.executeUpdate(addCoOwnerQuery);
@@ -213,6 +212,8 @@ public class DBHelper {
 
         return success;
     }
+
+
 
     public float withdraw(int accountId, float amount, boolean createTransaction, int recieverAcctId, String transactionType)  {
 //        if (isClosed== true) {
@@ -233,7 +234,7 @@ public class DBHelper {
         boolean isCustomer = isCustomerAcct(accountId);
 
         if(isCustomer){
-            oldBalance = customer.accounts.get(accountType).balance;
+            oldBalance = customer.accounts.get(accountId).balance;
         }
         else{
             String getBalance = "SELECT balance FROM Accounts WHERE accountId = " + accountId;
@@ -279,13 +280,13 @@ public class DBHelper {
 
         //update balance in class
         if(isCustomer) {
-            customer.accounts.get(accountType).balance = newBalance;
+            customer.accounts.get(accountId).balance = newBalance;
         }
 
 
         //add transaction
         if(createTransaction && isCustomer){
-            customer.accounts.get(accountType).addTransaction(customer.name, transactionType, "", amount, accountId, recieverAcctId);
+            customer.accounts.get(accountId).addTransaction(customer.name, transactionType, "", amount, accountId, recieverAcctId);
         }
 
         return newBalance;
@@ -308,7 +309,7 @@ public class DBHelper {
         boolean isCustomer = isCustomerAcct(accountId);
 
         if(isCustomer){
-            oldBalance = customer.accounts.get(accountType).balance;
+            oldBalance = customer.accounts.get(accountId).balance;
         }
         else{
             String getBalance = "SELECT balance FROM Accounts WHERE accountId = " + accountId;
@@ -342,12 +343,12 @@ public class DBHelper {
         //add transaction
         if(createTransaction && isCustomer){
 
-            customer.accounts.get(accountType).addTransaction(customer.name, transactionType, "", amount, senderAcctId, accountId);
+            customer.accounts.get(accountId).addTransaction(customer.name, transactionType, "", amount, senderAcctId, accountId);
         }
 
         //update balance in class
         if(isCustomer) {
-            customer.accounts.get(accountType).balance = newBalance;
+            customer.accounts.get(accountId).balance = newBalance;
         }
 
         return newBalance;
@@ -441,6 +442,23 @@ public class DBHelper {
         return true;
     }
 
+    public void closeAcct(int acctId){
+        try{
+            String closeQuery = "UPDATE Accounts SET isClosed = 0 WHERE accountId = " + acctId;
+            stmt.executeUpdate(closeQuery);
+        }catch(SQLException e){
+            System.out.println(e.getMessage());
+        }
+        catch(Exception e){
+            //Handle errors for Class.forName
+            System.out.println(e.getMessage());
+        }
+
+        if(isCustomerAcct(acctId)){
+            customer.accounts.get(acctId).isClosed = 0;
+        }
+    }
+
     private boolean isPocket(int accountID){
         try {
             String accountType = "";
@@ -465,7 +483,7 @@ public class DBHelper {
     }
 
     private boolean isCustomerAcct(int accountId){
-        for(Map.Entry<String, Customers.Account> e : customer.accounts.entrySet()){
+        for(Map.Entry<Integer, Customers.Account> e : customer.accounts.entrySet()){
             if(e.getValue().accountId == accountId) {
                 return true;
             }
@@ -492,6 +510,36 @@ public class DBHelper {
         }
 
         return accountType;
+    }
+
+    private boolean isAcctClosed(int acctId){
+        if(isCustomerAcct(acctId)){
+            for(Map.Entry<Integer, Customers.Account> e : customer.accounts.entrySet()){
+                if(e.getValue().isClosed == 0){
+                    return true;
+                }
+            }
+        }
+        else{
+            try{
+                String isClosedQuery = "SELECT isClosed FROM Accounts WHERE accountId = " + acctId;
+                rs = stmt.executeQuery(isClosedQuery);
+                while(rs.next()){
+                    if(rs.getInt("isClosed") == 0){
+                        return true;
+                    }
+                }
+            }catch(SQLException e){
+                System.out.println(e.getMessage());
+            }
+            catch(Exception e){
+                //Handle errors for Class.forName
+                System.out.println(e.getMessage());
+            }
+
+        }
+
+        return false;
     }
 
     public void connect(String jdbcDriver, String DbUrl, String username, String password){

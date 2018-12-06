@@ -12,7 +12,7 @@ public class Customers {
     String name;
     String address;
     int pinNumber;
-    Map<String, Account> accounts; //Key: AccountType, Value Account
+    Map<Integer, Account> accounts; //Key: AccountType, Value Account
 
     Customers(int taxId, String name, String address, int pinNumber){
         this.taxId = taxId;
@@ -24,7 +24,7 @@ public class Customers {
 
     public void addAccount(int accountId, float balance, String branch, float interestRate, String accountType){
         Account acct = new Account(accountId, balance, branch, interestRate, accountType);
-        accounts.put(accountType, acct);
+        accounts.put(accountId, acct);
     }
 
 
@@ -36,6 +36,7 @@ public class Customers {
         String accountType;
         int linkedAcctId;
         List<String> transactionHistory;
+        int isClosed;
 
         Account(int accountId, float balance, String branch, float interestRate, String accountType){
             this.accountId = accountId;
@@ -43,10 +44,13 @@ public class Customers {
             this.branch = branch;
             this.interestRate = interestRate;
             this.accountType = accountType;
-
+            this.isClosed = 1;
             //transactionHistory = new ArrayList<>();
         }
 
+        public void closeAcct(){
+
+        }
 
         public void setLinkedAcctId(int linkedAcctId){
             this.linkedAcctId = linkedAcctId;
