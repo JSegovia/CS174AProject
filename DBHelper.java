@@ -1,6 +1,7 @@
-package edu.ucsb.cs.JonathanSegoviaArturoMilanes;
 
 import com.google.gson.Gson;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -144,12 +145,27 @@ public class DBHelper {
 
     public boolean createNewAccount(int accountId, int taxId, String accountType, String branch, int accountLinkedId){
         //TODO: handle interest rates
-
+    	
         boolean success = false;
         try{
-            //int accountId = (int)(Math.random() * ((Integer.MAX_VALUE) + 1))*(-1);
+        	String checkAccount = "SELECT * FROM Accounts WHERE accountId = " + accountId;
+        	rs = stmt.executeQuery(checkAccount);
+        	while(rs.next()) {
+        		System.out.println("This account already exists");
+        		return false;
+        	}
+        
             float balance = 0.0f;
-            float interestRate = 5.5f;
+            float interestRate = 0.0f;
+            if(accountType.equals("checking")){
+                interestRate = 5.5f/12.0f;
+            }
+            else if(accountType.equals("savings")){
+                interestRate = 7.5f/12.0f;
+            }
+            else{
+                interestRate = 0.0f;
+            }
             String transactionHistory = new Gson().toJson(new ArrayList<String>());
             String insertAccount;
 
@@ -208,6 +224,7 @@ public class DBHelper {
     public boolean addCoOwner(int taxId, int accountId){
         boolean success = false;
         try{
+        	
             String addCoOwnerQuery = "INSERT INTO Owns(taxId, accountId) " +
                     "VALUES (" + taxId + ", " + accountId + ")";
             stmt.executeUpdate(addCoOwnerQuery);
@@ -280,7 +297,7 @@ public class DBHelper {
                             "set balance = " + newBalance +
                             " where accountid= " +  accountId;
             try {
-                stmt.executeQuery(updatedBalance);
+                stmt.executeUpdate(updatedBalance);
             }catch (SQLException E) {
                 E.printStackTrace();
             }
@@ -295,6 +312,23 @@ public class DBHelper {
         //add transaction
         if(createTransaction && isCustomer){
             customer.accounts.get(accountId).addTransaction(customer.name, transactionType, "", amount, accountId, recieverAcctId);
+        }
+        else if(createTransaction){
+            String getTransactionHistory = "SELECT transactionHistory FROM Accounts WHERE accountId = " + accountId;
+            try {
+                List<String> th = new ArrayList<>();
+                rs = stmt.executeQuery(getTransactionHistory);
+                while(rs.next()){
+                    String thAsString = rs.getString("transactionHistory");
+                    th = new Gson().fromJson(thAsString, new ArrayList<String>().getClass());
+                }
+                th.add("" + " " + transactionType + " " + new SimpleDateFormat("dd-MM-yyyy").format(new Date().getTime()) + " " + amount + " " + accountId + " " + recieverAcctId);
+                String json = new Gson().toJson(th);
+                String deleteTrans = "UPDATE Accounts SET transactionHistory = '" + json + "' WHERE accountId = " + accountId;
+                stmt.executeUpdate(deleteTrans);
+            }catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
 
         return newBalance;
@@ -340,7 +374,7 @@ public class DBHelper {
                         "set balance = " + newBalance +
                         " where accountid = " + accountId;
         try{
-            stmt.executeQuery(updatedBalance);
+            stmt.executeUpdate(updatedBalance);
 
 
             // rs.close();
@@ -351,7 +385,24 @@ public class DBHelper {
         //add transaction
         if(createTransaction && isCustomer){
 
-            customer.accounts.get(accountId).addTransaction(customer.name, transactionType, "", amount, senderAcctId, accountId);
+        	customer.accounts.get(accountId).addTransaction(customer.name, transactionType, new SimpleDateFormat("dd-MM-yyyy").format(new Date().getTime()), amount, senderAcctId, accountId);
+        }
+        else if(createTransaction){
+            String getTransactionHistory = "SELECT transactionHistory FROM Accounts WHERE accountId = " + accountId;
+            try {
+                List<String> th = new ArrayList<>();
+                rs = stmt.executeQuery(getTransactionHistory);
+                while(rs.next()){
+                    String thAsString = rs.getString("transactionHistory");
+                    th = new Gson().fromJson(thAsString, new ArrayList<String>().getClass());
+                }
+                th.add("" + " " + transactionType + " " + new SimpleDateFormat("dd-MM-yyyy").format(new Date().getTime()) + " " + amount + " " + senderAcctId + " " + accountId);
+                String json = new Gson().toJson(th);
+                String deleteTrans = "UPDATE Accounts SET transactionHistory = '" + json + "' WHERE accountId = " + accountId;
+                stmt.executeUpdate(deleteTrans);
+            }catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
 
         //update balance in class
@@ -359,8 +410,9 @@ public class DBHelper {
             customer.accounts.get(accountId).balance = newBalance;
         }
 
-        return newBalance;
+        	return newBalance;
     }
+    
 
     public boolean transfer(int senderAcctId, int recieverAcctId, float amount){
         if (isAcctClosed(senderAcctId)) {
@@ -398,7 +450,7 @@ public class DBHelper {
         }
 
         withdraw(senderAcctId, amount, true, recieverAcctId, "Transfer");
-        deposit(recieverAcctId, amount, false, -1, "");
+        deposit(recieverAcctId, amount, true, senderAcctId, "Transfer");
         return success;
     }
     public boolean collect(int acctId, float amount){
@@ -435,7 +487,7 @@ public class DBHelper {
         }
 
         withdraw(acctId, amount + (amount * 0.03f), true, recieverId, "Collect");
-        deposit(recieverId, amount, false, -1, "");
+        deposit(recieverId, amount, true, acctId, "Collect");
 
         return true;
     }
@@ -458,7 +510,7 @@ public class DBHelper {
         }
 
         withdraw(senderAcctId, amount + (amount * 0.02f), true, recieverAcctId, "Wire");
-        deposit(recieverAcctId, amount, false, -1, "");
+        deposit(recieverAcctId, amount, true, senderAcctId, "Wire");
 
         return success;
     }
@@ -485,7 +537,7 @@ public class DBHelper {
         }
 
         withdraw(senderAcctId, amount, true, recieverAcctId, "Pay-Friend");
-        deposit(senderAcctId, amount, false, -1, "");
+        deposit(recieverAcctId, amount, true, senderAcctId, "Pay-Friend");
 
         return true;
     }
@@ -618,11 +670,6 @@ public class DBHelper {
             return false;
         }
 
-        if(!isCustomerAcct(accountId)){
-            System.out.println("This account does not belong to current customer");
-            return false;
-        }
-
         int recieverId = -1;
         try{
             //pocketID
@@ -643,7 +690,7 @@ public class DBHelper {
         //withdraw from checkings or savings
         withdraw(accountId, amount, true, recieverId, "TopUp");
         //deposit to pocket
-        deposit(recieverId, amount, false, -1, "");
+        deposit(recieverId, amount, true, accountId, "TopUp");
         return true;
     }
 
@@ -817,8 +864,9 @@ public class DBHelper {
                 accountType = rs.getString("accountType");
             }
 
-            if(accountType.equals("Student")|| accountType.equals("Interest")){
-                return true;
+            //if(accountType.equals("Student")|| accountType.equals("Interest")){
+            if (accountType.equals("checking")) { 
+            return true;
             }
 
         }catch(SQLException se){
