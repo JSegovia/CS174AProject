@@ -266,11 +266,24 @@ public class DBHelper {
         //if transaction makes balance below 0, then fail.
         //if transaction makes balance .01 or less automatically closes the account
         if (newBalance <= 0){
-            closeAcct(accountId);
-            System.out.println("Balance of Account " + accountId + " fell below 0 and is now closed");
-            return newBalance;
+            System.out.println("Failed Trancaction. Balance of Account " + accountId + " would fall below 0");
         }
-
+elseif(newBalance <=.01){
+System.out.println("Balance of Account " + accountId + " fell below 0.01 and is now closed");
+      //update balance!!
+            String updatedBalance=
+                    "update accounts " +
+                            "set balance = " + newBalance +
+                            " where accountid= " +  accountId;
+            try {
+                stmt.executeQuery(updatedBalance);
+            }catch (SQLException E) {
+                E.printStackTrace();
+            }
+    closeAcct(accountId);      
+    return newBalance;
+    
+}
         else {
 
 
